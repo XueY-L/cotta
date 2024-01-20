@@ -17,3 +17,5 @@ __pycache__/
 
 /notebooks/*wild.ipynb
 /experiments
+output/
+ckpt/

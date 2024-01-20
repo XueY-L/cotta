@@ -1,3 +1,6 @@
+'''
+CUDA_VISIBLE_DEVICES=2 python cifar100c.py --cfg cfgs/source_11domains.yaml
+'''
 import logging
 
 import torch
@@ -23,6 +26,7 @@ def evaluate(description):
     # configure model
     base_model = load_model(cfg.MODEL.ARCH, cfg.CKPT_DIR,
                        cfg.CORRUPTION.DATASET, ThreatModel.corruptions).cuda()
+    # base_model.load_state_dict(torch.load('/home/yxue/model_fusion_tta/cifar/checkpoint/ckpt_[\'jpeg_compression\']_[5]_noaug.pt')['model'])
     if cfg.MODEL.ADAPTATION == "source":
         logger.info("test-time adaptation: NONE")
         model = setup_source(base_model)
@@ -40,21 +44,22 @@ def evaluate(description):
     for severity in cfg.CORRUPTION.SEVERITY:
         for i_c, corruption_type in enumerate(cfg.CORRUPTION.TYPE):
             # continual adaptation for all corruption 
-            if i_c == 0:
-                try:
-                    model.reset()
-                    logger.info("resetting model")
-                except:
-                    logger.warning("not resetting model")
-            else:
-                logger.warning("not resetting model")
+            # if i_c == 0:
+            #     try:
+            #         model.reset()
+            #         logger.info("resetting model")
+            #     except:
+            #         logger.warning("not resetting model")
+            # else:
+            #     logger.warning("not resetting model")
             x_test, y_test = load_cifar100c(cfg.CORRUPTION.NUM_EX,
                                            severity, cfg.DATA_DIR, False,
                                            [corruption_type])
             x_test, y_test = x_test.cuda(), y_test.cuda()
             acc = accuracy(model, x_test, y_test, cfg.TEST.BATCH_SIZE)
             err = 1. - acc
-            logger.info(f"error % [{corruption_type}{severity}]: {err:.2%}")
+            # logger.info(f"accuracy % [{corruption_type}{severity}]: {acc:.4} \t error % [{corruption_type}{severity}]: {err:.4}")
+            print(f'{acc:.4}', end=' ')
 
 
 def setup_source(model):
