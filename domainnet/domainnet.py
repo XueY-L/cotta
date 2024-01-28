@@ -1,32 +1,38 @@
 '''
-CUDA_VISIBLE_DEVICES=3 python -u imagenetc.py --cfg cfgs/source_11domains.yaml
+CUDA_VISIBLE_DEVICES=0 python -u domainnet.py --cfg cfgs/source.yaml
 '''
 import logging
 
 import torch
 import torch.optim as optim
-
-from robustbench.data import load_imagenetc
-from robustbench.model_zoo.enums import ThreatModel
-from robustbench.utils import load_model
-from robustbench.utils import clean_accuracy as accuracy
+import torchvision.models as tmodels
 
 import tent
 import norm
 import cotta
+
+from load_domainnet import DomainNetLoader, get_domainnet126
 
 from conf import cfg, load_cfg_fom_args
 
 
 logger = logging.getLogger(__name__)
 
+model_path = {  # pretrained resnet50-lr0.001
+    'clipart':'/home/yxue/model_fusion_dnn/ckpt_res50/checkpoint/domainnet_domainbed_hparam/hparam_lr/ckpt_clipart__sgd_lr-s0.001_lr-w0.0005_bs32_seed42_source-[]_DomainNet_resnet50-1.0x_singletraining-domainbedhparam_lrd-[-2, -1]_wd-0.0005.pth',
+    'infograph':'/home/yxue/model_fusion_dnn/ckpt_res50/checkpoint/domainnet_domainbed_hparam/hparam_lr/ckpt_infograph__sgd_lr-s0.001_lr-w0.0005_bs32_seed42_source-[]_DomainNet_resnet50-1.0x_singletraining-domainbedhparam_lrd-[-2, -1]_wd-0.0005.pth',
+    'painting':'/home/yxue/model_fusion_dnn/ckpt_res50/checkpoint/domainnet_domainbed_hparam/hparam_lr/ckpt_painting__sgd_lr-s0.001_lr-w0.0005_bs32_seed42_source-[]_DomainNet_resnet50-1.0x_singletraining-domainbedhparam_lrd-[-2, -1]_wd-0.0005.pth',
+    'quickdraw':'/home/yxue/model_fusion_dnn/ckpt_res50/checkpoint/domainnet_domainbed_hparam/hparam_lr/ckpt_quickdraw__sgd_lr-s0.001_lr-w0.0005_bs32_seed42_source-[]_DomainNet_resnet50-1.0x_singletraining-domainbedhparam_lrd-[-2, -1]_wd-0.0005.pth',
+    'real':'/home/yxue/model_fusion_dnn/ckpt_res50/checkpoint/domainnet_domainbed_hparam/hparam_lr/ckpt_real__sgd_lr-s0.001_lr-w0.0005_bs32_seed42_source-[]_DomainNet_resnet50-1.0x_singletraining-domainbedhparam_lrd-[-2, -1]_wd-0.0005.pth',
+    'sketch':'/home/yxue/model_fusion_dnn/ckpt_res50/checkpoint/domainnet_domainbed_hparam/hparam_lr/ckpt_sketch__sgd_lr-s0.001_lr-w0.0005_bs32_seed42_source-[]_DomainNet_resnet50-1.0x_singletraining-domainbedhparam_lrd-[-2, -1]_wd-0.0005.pth',
+}
+
 
 def evaluate(description):
     load_cfg_fom_args(description)
     # configure model
-    base_model = load_model(cfg.MODEL.ARCH, cfg.CKPT_DIR,
-                       cfg.CORRUPTION.DATASET, ThreatModel.corruptions).cuda()
-    base_model.load_state_dict(torch.load('/home/yxue/model_fusion_tta/imagenet/checkpoint/ckpt_[\'jpeg_compression\']_[5].pt')['model'])
+    base_model = tmodels.resnet50(num_classes=345).cuda()
+    base_model.load_state_dict(torch.load('/home/yxue/model_fusion_dnn/ckpt_res50/checkpoint/domainnet_domainbed_hparam/hparam_lr/ckpt_painting__sgd_lr-s0.001_lr-w0.0005_bs32_seed42_source-[]_DomainNet_resnet50-1.0x_singletraining-domainbedhparam_lrd-[-2, -1]_wd-0.0005.pth')['net'])
     if cfg.MODEL.ADAPTATION == "source":
         logger.info("test-time adaptation: NONE")
         model = setup_source(base_model)
@@ -39,26 +45,41 @@ def evaluate(description):
     if cfg.MODEL.ADAPTATION == "cotta":
         logger.info("test-time adaptation: CoTTA")
         model = setup_cotta(base_model)
-    # evaluate on each severity and type of corruption in turn
-    prev_ct = "x0"
-    for ii, severity in enumerate(cfg.CORRUPTION.SEVERITY):
-        for i_x, corruption_type in enumerate(cfg.CORRUPTION.TYPE):
-            # reset adaptation for each combination of corruption x severity
-            # note: for evaluation protocol, but not necessarily needed
-            # try:
-            #     if i_x == 0:
-            #         model.reset()
-            #         logger.info("resetting model")
-            #     else:
-            #         logger.warning("not resetting model")
-            # except:
-            #     logger.warning("not resetting model")
-            x_test, y_test = load_imagenetc(cfg.CORRUPTION.NUM_EX, severity, cfg.DATA_DIR, False, [corruption_type])
-            x_test, y_test = x_test.cuda(), y_test.cuda()
-            acc = accuracy(model, x_test, y_test, cfg.TEST.BATCH_SIZE)
-            err = 1. - acc
-            # logger.info(f"accuracy % [{corruption_type}{severity}]: {acc:.4} \t error % [{corruption_type}{severity}]: {err:.4}")
-            print(f'{acc:.4}', end=' ')
+
+
+    LEN_SET = {
+        'clipart':[26681,6844,14604],
+        'infograph':[28678,7345,15582],
+        'painting':[40196,10220,21850],
+        'quickdraw':[96600,24150,51750],
+        'real':[96589, 24317, 52041],
+        'sketch':[38433,9779,20916],
+    }
+
+    targets = ['clipart','real']
+
+    # _, _, test_ls = DomainNetLoader(
+    #     dataset_path='/home/yxue/datasets/DomainNet',
+    #     batch_size=cfg.TEST.BATCH_SIZE,
+    #     num_workers=16,
+    # ).get_source_dloaders(domain_ls=targets)
+    
+    test_ls = []
+    for d in targets:
+        test_loader = get_domainnet126('/home/yxue/datasets/DomainNet-126', d, cfg.TEST.BATCH_SIZE)
+        test_ls.append(test_loader)
+
+    for idx, test_loader in enumerate(test_ls):
+        correct_num = 0
+        for data, label in test_loader:
+            data, label = data.cuda(), label.cuda()
+            res = model(data)
+            _, predicted = torch.max(res.data, 1)
+            correct = predicted.eq(label.data).cpu().sum()
+            correct_num += correct
+        acc = correct_num / LEN_SET[targets[idx]][2]
+        print(f'{acc:.4}')
+           
 
 
 def setup_source(model):
@@ -147,4 +168,4 @@ def setup_cotta(model):
 
 
 if __name__ == '__main__':
-    evaluate('"Imagenet-C evaluation.')
+    evaluate('"DomainNet evaluation.')

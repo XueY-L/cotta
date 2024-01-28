@@ -1,0 +1,6 @@
+DATA_DIR: /home/yxue/datasets
+MODEL:
+  ADAPTATION: source
+  ARCH: Standard_R50
+TEST:
+  BATCH_SIZE: 50  # 64
