@@ -1,6 +1,7 @@
 cifar/ckpt/
 cifar/output/
 imagenet/output/
+domainnet/output/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -1,5 +1,5 @@
 '''
-CUDA_VISIBLE_DEVICES=0 python -u domainnet.py --cfg cfgs/source.yaml
+CUDA_VISIBLE_DEVICES=2 python -u domainnet.py --cfg cfgs/tent.yaml
 '''
 import logging
 
@@ -18,21 +18,19 @@ from conf import cfg, load_cfg_fom_args
 
 logger = logging.getLogger(__name__)
 
-model_path = {  # pretrained resnet50-lr0.001
-    'clipart':'/home/yxue/model_fusion_dnn/ckpt_res50/checkpoint/domainnet_domainbed_hparam/hparam_lr/ckpt_clipart__sgd_lr-s0.001_lr-w0.0005_bs32_seed42_source-[]_DomainNet_resnet50-1.0x_singletraining-domainbedhparam_lrd-[-2, -1]_wd-0.0005.pth',
-    'infograph':'/home/yxue/model_fusion_dnn/ckpt_res50/checkpoint/domainnet_domainbed_hparam/hparam_lr/ckpt_infograph__sgd_lr-s0.001_lr-w0.0005_bs32_seed42_source-[]_DomainNet_resnet50-1.0x_singletraining-domainbedhparam_lrd-[-2, -1]_wd-0.0005.pth',
-    'painting':'/home/yxue/model_fusion_dnn/ckpt_res50/checkpoint/domainnet_domainbed_hparam/hparam_lr/ckpt_painting__sgd_lr-s0.001_lr-w0.0005_bs32_seed42_source-[]_DomainNet_resnet50-1.0x_singletraining-domainbedhparam_lrd-[-2, -1]_wd-0.0005.pth',
-    'quickdraw':'/home/yxue/model_fusion_dnn/ckpt_res50/checkpoint/domainnet_domainbed_hparam/hparam_lr/ckpt_quickdraw__sgd_lr-s0.001_lr-w0.0005_bs32_seed42_source-[]_DomainNet_resnet50-1.0x_singletraining-domainbedhparam_lrd-[-2, -1]_wd-0.0005.pth',
-    'real':'/home/yxue/model_fusion_dnn/ckpt_res50/checkpoint/domainnet_domainbed_hparam/hparam_lr/ckpt_real__sgd_lr-s0.001_lr-w0.0005_bs32_seed42_source-[]_DomainNet_resnet50-1.0x_singletraining-domainbedhparam_lrd-[-2, -1]_wd-0.0005.pth',
-    'sketch':'/home/yxue/model_fusion_dnn/ckpt_res50/checkpoint/domainnet_domainbed_hparam/hparam_lr/ckpt_sketch__sgd_lr-s0.001_lr-w0.0005_bs32_seed42_source-[]_DomainNet_resnet50-1.0x_singletraining-domainbedhparam_lrd-[-2, -1]_wd-0.0005.pth',
+model_path = {
+    'clipart':'/home/yxue/model_fusion_dnn/ckpt_res50_domainnet126/checkpoint/ckpt_clipart__sgd_lr-s0.001_lr-w-1.0_bs32_seed42_source-[]_DomainNet126_resnet50-1.0x_SingleTraining-DomainNet126_lrd-[-2, -1]_wd-0.0005.pth',
+    'painting':'/home/yxue/model_fusion_dnn/ckpt_res50_domainnet126/checkpoint/ckpt_painting__sgd_lr-s0.001_lr-w-1.0_bs32_seed42_source-[]_DomainNet126_resnet50-1.0x_SingleTraining-DomainNet126_lrd-[-2, -1]_wd-0.0005.pth',
+    'real':'/home/yxue/model_fusion_dnn/ckpt_res50_domainnet126/checkpoint/ckpt_real__sgd_lr-s0.001_lr-w-1.0_bs32_seed42_source-[]_DomainNet126_resnet50-1.0x_SingleTraining-DomainNet126_lrd-[-2, -1]_wd-0.0005.pth',
+    'sketch':'/home/yxue/model_fusion_dnn/ckpt_res50_domainnet126/checkpoint/ckpt_sketch__sgd_lr-s0.001_lr-w-1.0_bs32_seed42_source-[]_DomainNet126_resnet50-1.0x_SingleTraining-DomainNet126_lrd-[-2, -1]_wd-0.0005.pth',
 }
 
 
 def evaluate(description):
     load_cfg_fom_args(description)
     # configure model
-    base_model = tmodels.resnet50(num_classes=345).cuda()
-    base_model.load_state_dict(torch.load('/home/yxue/model_fusion_dnn/ckpt_res50/checkpoint/domainnet_domainbed_hparam/hparam_lr/ckpt_painting__sgd_lr-s0.001_lr-w0.0005_bs32_seed42_source-[]_DomainNet_resnet50-1.0x_singletraining-domainbedhparam_lrd-[-2, -1]_wd-0.0005.pth')['net'])
+    base_model = tmodels.resnet50(num_classes=126).cuda()
+    base_model.load_state_dict(torch.load(model_path['real'])['net'])
     if cfg.MODEL.ADAPTATION == "source":
         logger.info("test-time adaptation: NONE")
         model = setup_source(base_model)
@@ -47,16 +45,14 @@ def evaluate(description):
         model = setup_cotta(base_model)
 
 
-    LEN_SET = {
-        'clipart':[26681,6844,14604],
-        'infograph':[28678,7345,15582],
-        'painting':[40196,10220,21850],
-        'quickdraw':[96600,24150,51750],
-        'real':[96589, 24317, 52041],
-        'sketch':[38433,9779,20916],
+    LEN_SET_DomainNet126 = {
+        'clipart':18523,
+        'painting':30042,
+        'real':69622,
+        'sketch':24147,
     }
 
-    targets = ['clipart','real']
+    targets = ['clipart', 'painting', 'real', 'sketch']  # 'clipart', 'painting', 'real', 'sketch'
 
     # _, _, test_ls = DomainNetLoader(
     #     dataset_path='/home/yxue/datasets/DomainNet',
@@ -77,7 +73,7 @@ def evaluate(description):
             _, predicted = torch.max(res.data, 1)
             correct = predicted.eq(label.data).cpu().sum()
             correct_num += correct
-        acc = correct_num / LEN_SET[targets[idx]][2]
+        acc = correct_num / LEN_SET_DomainNet126[targets[idx]]
         print(f'{acc:.4}')
            
 

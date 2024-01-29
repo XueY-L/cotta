@@ -4,21 +4,21 @@ CORRUPTION:
   SEVERITY:
   - 5
   TYPE:
-    # - gaussian_noise
+    - gaussian_noise
     - shot_noise
     - impulse_noise
     - defocus_blur
-    # - glass_blur
+    - glass_blur
     - motion_blur
     - zoom_blur
     # - snow
-    - frost
-    - fog
-    - brightness
+    # - frost
+    # - fog
+    # - brightness
     - contrast
     - elastic_transform
     - pixelate
-    # - jpeg_compression
+    - jpeg_compression
 MODEL:
   ADAPTATION: tent
   ARCH: Standard_R50
