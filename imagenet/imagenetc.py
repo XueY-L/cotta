@@ -1,5 +1,5 @@
 '''
-CUDA_VISIBLE_DEVICES=3 python -u imagenetc.py --cfg cfgs/tent_11domains.yaml
+CUDA_VISIBLE_DEVICES=1 python -u imagenetc.py --cfg cfgs/cotta_11domains.yaml
 '''
 import logging
 
@@ -25,8 +25,8 @@ def evaluate(description):
     load_cfg_fom_args(description)
     # configure model
     base_model = load_model(cfg.MODEL.ARCH, cfg.CKPT_DIR,
-                       cfg.CORRUPTION.DATASET, ThreatModel.corruptions).cuda()
-    base_model.load_state_dict(torch.load('/home/yxue/model_fusion_tta/imagenet/checkpoint/ckpt_[\'snow\']_[5].pt')['model'])
+                       cfg.CORRUPTION.DATASET, ThreatModel.corruptions).cuda()  # 最前面是normalize
+    base_model.load_state_dict(torch.load('/home/yxue/model_fusion_tta/imagenet/checkpoint/ckpt_[\'jpeg_compression\']_[3].pt')['model'])
     if cfg.MODEL.ADAPTATION == "source":
         logger.info("test-time adaptation: NONE")
         model = setup_source(base_model)

@@ -11,10 +11,10 @@ CORRUPTION:
     - glass_blur
     - motion_blur
     - zoom_blur
-    # - snow
-    # - frost
-    # - fog
-    # - brightness
+    - snow
+    - frost
+    - fog
+    - brightness
     - contrast
     - elastic_transform
     - pixelate
@@ -29,4 +29,4 @@ OPTIM:
   STEPS: 1
   WD: 0.0
 TEST:
-  BATCH_SIZE: 64
+  BATCH_SIZE: 50
