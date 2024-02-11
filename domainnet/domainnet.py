@@ -1,5 +1,5 @@
 '''
-CUDA_VISIBLE_DEVICES=2 python -u domainnet.py --cfg cfgs/tent.yaml
+CUDA_VISIBLE_DEVICES=1 python -u domainnet.py --cfg cfgs/tent.yaml
 '''
 import logging
 
@@ -28,9 +28,13 @@ model_path = {
 
 def evaluate(description):
     load_cfg_fom_args(description)
+
     # configure model
     base_model = tmodels.resnet50(num_classes=126).cuda()
-    base_model.load_state_dict(torch.load(model_path['real'])['net'])
+    base_model.load_state_dict(torch.load(model_path['sketch'])['net'])
+    
+    targets = ['clipart', 'real']  # 'clipart', 'painting', 'real', 'sketch'
+    
     if cfg.MODEL.ADAPTATION == "source":
         logger.info("test-time adaptation: NONE")
         model = setup_source(base_model)
@@ -51,8 +55,6 @@ def evaluate(description):
         'real':69622,
         'sketch':24147,
     }
-
-    targets = ['clipart', 'painting', 'real', 'sketch']  # 'clipart', 'painting', 'real', 'sketch'
 
     # _, _, test_ls = DomainNetLoader(
     #     dataset_path='/home/yxue/datasets/DomainNet',

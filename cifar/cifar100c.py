@@ -1,5 +1,5 @@
 '''
-CUDA_VISIBLE_DEVICES=2 python cifar100c.py --cfg cfgs/cotta_11domains.yaml
+CUDA_VISIBLE_DEVICES=1 python cifar100c.py --cfg cfgs/source_11domains.yaml
 '''
 import logging
 
@@ -26,7 +26,7 @@ def evaluate(description):
     # configure model
     base_model = load_model(cfg.MODEL.ARCH, cfg.CKPT_DIR,
                        cfg.CORRUPTION.DATASET, ThreatModel.corruptions).cuda()
-    base_model.load_state_dict(torch.load('/home/yxue/model_fusion_tta/cifar/checkpoint/ckpt_cifar100_[\'snow\']_[1].pt')['model'])
+    base_model.load_state_dict(torch.load('/home/yxue/model_fusion_tta/cifar/checkpoint/ckpt_cifar100_[\'gaussian_noise\']_[1].pt')['model'])
     if cfg.MODEL.ADAPTATION == "source":
         logger.info("test-time adaptation: NONE")
         model = setup_source(base_model)
@@ -59,7 +59,7 @@ def evaluate(description):
             acc = accuracy(model, x_test, y_test, cfg.TEST.BATCH_SIZE)
             err = 1. - acc
             # logger.info(f"accuracy % [{corruption_type}{severity}]: {acc:.4} \t error % [{corruption_type}{severity}]: {err:.4}")
-            print(f'{acc:.4}', end=' ')
+            print(f'{acc:.4}')
 
 
 def setup_source(model):
