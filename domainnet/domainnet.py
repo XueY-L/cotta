@@ -1,5 +1,5 @@
 '''
-CUDA_VISIBLE_DEVICES=1 python -u domainnet.py --cfg cfgs/tent.yaml
+CUDA_VISIBLE_DEVICES=0 python -u domainnet.py --cfg cfgs/source.yaml
 '''
 import logging
 
@@ -33,7 +33,7 @@ def evaluate(description):
     base_model = tmodels.resnet50(num_classes=126).cuda()
     base_model.load_state_dict(torch.load(model_path['sketch'])['net'])
     
-    targets = ['clipart', 'real']  # 'clipart', 'painting', 'real', 'sketch'
+    targets = ['clipart', 'painting']  # 'clipart', 'painting', 'real', 'sketch'
     
     if cfg.MODEL.ADAPTATION == "source":
         logger.info("test-time adaptation: NONE")
@@ -56,7 +56,7 @@ def evaluate(description):
         'sketch':24147,
     }
 
-    # _, _, test_ls = DomainNetLoader(
+    # _, _, test_ls = DomainNetLoader( 
     #     dataset_path='/home/yxue/datasets/DomainNet',
     #     batch_size=cfg.TEST.BATCH_SIZE,
     #     num_workers=16,
@@ -76,7 +76,7 @@ def evaluate(description):
             correct = predicted.eq(label.data).cpu().sum()
             correct_num += correct
         acc = correct_num / LEN_SET_DomainNet126[targets[idx]]
-        print(f'{acc:.4}')
+        print(f'{acc:.4}, {LEN_SET_DomainNet126[targets[idx]]}')
            
 
 
