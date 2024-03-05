@@ -47,7 +47,7 @@ def evaluate(description):
     dataset = ImageFolder(f'/home/yxue/datasets/ImageNet-C/{source}/1', transforms.Compose([transforms.Resize(256),
                                          transforms.CenterCrop(224),
                                          transforms.ToTensor()]))
-    source_loader = torch.utils.data.DataLoader(dataset, batch_size=50, shuffle=False, num_workers=16)
+    source_loader = torch.utils.data.DataLoader(dataset, batch_size=50, shuffle=False, num_workers=32)
 
     # evaluate on each severity and type of corruption in turn
     prev_ct = "x0"

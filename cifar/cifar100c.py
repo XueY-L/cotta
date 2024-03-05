@@ -1,6 +1,7 @@
 '''
-CUDA_VISIBLE_DEVICES=1 python cifar100c.py --cfg cfgs/source_11domains.yaml
+CUDA_VISIBLE_DEVICES=1 python cifar100c.py --cfg cfgs/tent_11domains.yaml
 '''
+import copy
 import logging
 
 import torch
@@ -24,9 +25,9 @@ logger = logging.getLogger(__name__)
 def evaluate(description):
     load_cfg_fom_args(description)
     # configure model
-    base_model = load_model(cfg.MODEL.ARCH, cfg.CKPT_DIR,
-                       cfg.CORRUPTION.DATASET, ThreatModel.corruptions).cuda()
-    base_model.load_state_dict(torch.load('/home/yxue/model_fusion_tta/cifar/checkpoint/ckpt_cifar100_[\'gaussian_noise\']_[1].pt')['model'])
+    source = 'snow'
+    base_model = load_model(cfg.MODEL.ARCH, cfg.CKPT_DIR, cfg.CORRUPTION.DATASET, ThreatModel.corruptions).cuda()
+    base_model.load_state_dict(torch.load(f'/home/yxue/model_fusion_tta/cifar/checkpoint/ckpt_cifar100_[\'{source}\']_[1].pt')['model'])
     if cfg.MODEL.ADAPTATION == "source":
         logger.info("test-time adaptation: NONE")
         model = setup_source(base_model)
@@ -39,8 +40,13 @@ def evaluate(description):
     if cfg.MODEL.ADAPTATION == "cotta":
         logger.info("test-time adaptation: CoTTA")
         model = setup_cotta(base_model)
+    
+    x_test_source, y_test_source = load_cifar100c(cfg.CORRUPTION.NUM_EX, 1, cfg.DATA_DIR, False, [source])
+    x_test_source, y_test_source = x_test_source.cuda(), y_test_source.cuda()
+    
     # evaluate on each severity and type of corruption in turn
     prev_ct = "x0"
+    res, res_forget = [], []
     for severity in cfg.CORRUPTION.SEVERITY:
         for i_c, corruption_type in enumerate(cfg.CORRUPTION.TYPE):
             # continual adaptation for all corruption 
@@ -52,15 +58,17 @@ def evaluate(description):
             #         logger.warning("not resetting model")
             # else:
             #     logger.warning("not resetting model")
-            x_test, y_test = load_cifar100c(cfg.CORRUPTION.NUM_EX,
-                                           severity, cfg.DATA_DIR, False,
-                                           [corruption_type])
+            x_test, y_test = load_cifar100c(cfg.CORRUPTION.NUM_EX, severity, cfg.DATA_DIR, False, [corruption_type])
             x_test, y_test = x_test.cuda(), y_test.cuda()
             acc = accuracy(model, x_test, y_test, cfg.TEST.BATCH_SIZE)
-            err = 1. - acc
             # logger.info(f"accuracy % [{corruption_type}{severity}]: {acc:.4} \t error % [{corruption_type}{severity}]: {err:.4}")
-            print(f'{acc:.4}')
+            res.append(round(acc, 4))
 
+            # 遗忘
+            temp_model = copy.deepcopy(model)
+            acc = accuracy(temp_model, x_test_source, y_test_source, cfg.TEST.BATCH_SIZE)
+            res_forget.append(round(acc, 4))
+            print(res, res_forget)
 
 def setup_source(model):
     """Set up the baseline source model without adaptation."""
