@@ -1,10 +1,13 @@
 '''
-CUDA_VISIBLE_DEVICES=2 python -u imagenetc.py --cfg cfgs/source_11domains.yaml
+CUDA_VISIBLE_DEVICES=1 python -u imagenetc_forget.py --cfg cfgs/cotta_11domains.yaml
 '''
+import copy
 import logging
 
 import torch
 import torch.optim as optim
+from torchvision.datasets import ImageFolder
+import torchvision.transforms as transforms
 
 from robustbench.data import load_imagenetc
 from robustbench.model_zoo.enums import ThreatModel
@@ -24,9 +27,10 @@ logger = logging.getLogger(__name__)
 def evaluate(description):
     load_cfg_fom_args(description)
     # configure model
+    source = 'jpeg_compression'
     base_model = load_model(cfg.MODEL.ARCH, cfg.CKPT_DIR,
                        cfg.CORRUPTION.DATASET, ThreatModel.corruptions).cuda()  # 最前面是normalize
-    base_model.load_state_dict(torch.load('/home/yxue/model_fusion_tta/imagenet/checkpoint/ckpt_[\'jpeg_compression\']_[1].pt')['model'])
+    base_model.load_state_dict(torch.load(f'/home/yxue/model_fusion_tta/imagenet/checkpoint/ckpt_[\'{source}\']_[1].pt')['model'])
     if cfg.MODEL.ADAPTATION == "source":
         logger.info("test-time adaptation: NONE")
         model = setup_source(base_model)
@@ -39,6 +43,12 @@ def evaluate(description):
     if cfg.MODEL.ADAPTATION == "cotta":
         logger.info("test-time adaptation: CoTTA")
         model = setup_cotta(base_model)
+
+    dataset = ImageFolder(f'/home/yxue/datasets/ImageNet-C/{source}/1', transforms.Compose([transforms.Resize(256),
+                                         transforms.CenterCrop(224),
+                                         transforms.ToTensor()]))
+    source_loader = torch.utils.data.DataLoader(dataset, batch_size=50, shuffle=False, num_workers=32)
+
     # evaluate on each severity and type of corruption in turn
     prev_ct = "x0"
     for ii, severity in enumerate(cfg.CORRUPTION.SEVERITY):
@@ -52,13 +62,24 @@ def evaluate(description):
             #     else:
             #         logger.warning("not resetting model")
             # except:
-            #     logger.warning("not resetting model")z
+            #     logger.warning("not resetting model")
             x_test, y_test = load_imagenetc(cfg.CORRUPTION.NUM_EX, severity, cfg.DATA_DIR, False, [corruption_type])
             x_test, y_test = x_test.cuda(), y_test.cuda()
             acc = accuracy(model, x_test, y_test, cfg.TEST.BATCH_SIZE)
-            err = 1. - acc
-            # logger.info(f"accuracy % [{corruption_type}{severity}]: {acc:.4} \t error % [{corruption_type}{severity}]: {err:.4}")
-            print(f'{acc:.4}', end=' ')
+            print(f'{acc:.4}')
+            
+            num_cor = 0
+            loader = copy.deepcopy(source_loader)
+            temp_model = copy.deepcopy(model)
+            for data, label in loader:
+                data, label = data.cuda(), label.cuda()
+                with torch.no_grad():
+                    rst = temp_model(data)
+                _, predicted = torch.max(rst.data, 1)
+                correct = predicted.eq(label.data).cpu().sum()
+                num_cor += correct
+            
+            print(f'{num_cor/len(loader):.4}')
 
 
 def setup_source(model):

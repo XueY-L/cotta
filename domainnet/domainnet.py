@@ -1,5 +1,5 @@
 '''
-CUDA_VISIBLE_DEVICES=0 python -u domainnet.py --cfg cfgs/source.yaml
+CUDA_VISIBLE_DEVICES=3 python -u domainnet.py --cfg cfgs/cotta.yaml
 '''
 import logging
 
@@ -31,9 +31,9 @@ def evaluate(description):
 
     # configure model
     base_model = tmodels.resnet50(num_classes=126).cuda()
-    base_model.load_state_dict(torch.load(model_path['sketch'])['net'])
+    base_model.load_state_dict(torch.load(model_path['real'])['net'])
     
-    targets = ['clipart', 'painting']  # 'clipart', 'painting', 'real', 'sketch'
+    targets = ['painting', 'sketch']  # 'clipart', 'painting', 'real', 'sketch'
     
     if cfg.MODEL.ADAPTATION == "source":
         logger.info("test-time adaptation: NONE")
