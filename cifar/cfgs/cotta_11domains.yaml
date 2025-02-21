@@ -1,4 +1,4 @@
-DATA_DIR: /home/yxue/datasets
+DATA_DIR: /home/yuanxue/data
 MODEL:
   ADAPTATION: cotta
   ARCH: Hendrycks2020AugMix_ResNeXt 

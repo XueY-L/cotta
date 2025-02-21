@@ -1,9 +1,9 @@
-DATA_DIR: /home/yxue/datasets
+DATA_DIR: /home/yuanxue/data
 MODEL:
   ADAPTATION: tent
   ARCH: Hendrycks2020AugMix_ResNeXt 
 TEST:
-  BATCH_SIZE: 200
+  BATCH_SIZE: 50 # 200
 CORRUPTION:
   DATASET: cifar100
   SEVERITY:

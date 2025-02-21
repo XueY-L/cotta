@@ -1,8 +1,9 @@
 '''
-CUDA_VISIBLE_DEVICES=1 python cifar100c.py --cfg cfgs/tent_11domains.yaml
+CUDA_VISIBLE_DEVICES=2 python cifar100c.py --cfg cfgs/cotta_11domains.yaml
 '''
 import copy
 import logging
+import time
 
 import torch
 import torch.optim as optim
@@ -27,7 +28,7 @@ def evaluate(description):
     # configure model
     source = 'snow'
     base_model = load_model(cfg.MODEL.ARCH, cfg.CKPT_DIR, cfg.CORRUPTION.DATASET, ThreatModel.corruptions).cuda()
-    base_model.load_state_dict(torch.load(f'/home/yxue/model_fusion_tta/cifar/checkpoint/ckpt_cifar100_[\'{source}\']_[1].pt')['model'])
+    base_model.load_state_dict(torch.load(f'/home/yuanxue/SAR/ckpt/cifar100/corruptions/ckpt_cifar100_[\'{source}\']_[1].pt')['model'])
     if cfg.MODEL.ADAPTATION == "source":
         logger.info("test-time adaptation: NONE")
         model = setup_source(base_model)
@@ -47,6 +48,7 @@ def evaluate(description):
     # evaluate on each severity and type of corruption in turn
     prev_ct = "x0"
     res, res_forget = [], []
+    t1 = time.time()
     for severity in cfg.CORRUPTION.SEVERITY:
         for i_c, corruption_type in enumerate(cfg.CORRUPTION.TYPE):
             # continual adaptation for all corruption 
@@ -69,6 +71,9 @@ def evaluate(description):
             acc = accuracy(temp_model, x_test_source, y_test_source, cfg.TEST.BATCH_SIZE)
             res_forget.append(round(acc, 4))
             print(res, res_forget)
+    t2 = time.time()
+    logger.info(f'Time: {t2-t1}s')
+        
 
 def setup_source(model):
     """Set up the baseline source model without adaptation."""
@@ -160,4 +165,4 @@ def setup_optimizer(params):
 
 
 if __name__ == '__main__':
-    evaluate('"CIFAR-10-C evaluation.')
+    evaluate('"CIFAR-100-C evaluation.')
